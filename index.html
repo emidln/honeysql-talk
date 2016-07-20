@@ -90,14 +90,14 @@ VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneyS
                           "Clojurians"
                           "Meetup"],
               "geo.position" ["41.881966" "-87.632362"]})}))
-</code></pre></li><li>Vectors are handled by the individual clause. When it makes sense, it is used for aliasing.<pre><code>(from [:foo :f])
+</code></pre></li><li class="fragment">Vectors are handled by the individual clause. When it makes sense, it is used for aliasing.<pre><code>(from [:foo :f])
 </code></pre><pre><code>(where [:= :bar "baz"])
 </code></pre><pre><code>#sql/call [:+ :total 1]</code></pre></li></ul></section><section><p>HoneySQL Notes (part 2)</p><ul><li>Not all clauses have helpers. They are easy to define if you think it'll help readability:<pre><code>(defn union
   {:argslists '([& queries] [m & queries])}
   [& args]
   (let [[m & queries] (if (map? (first args)) args (cons {} args))]
     (assoc m :union (vec queries))))
-</code></pre></li><li>Raw SQL access is available, see <a href="https://crossclj.info/doc/honeysql/latest/honeysql.core.html#_raw"><code>honeysql.core/raw</code></a><pre><code>(raw "current_date")
+</code></pre></li><li class="fragment">Raw SQL access is available, see <a href="https://crossclj.info/doc/honeysql/latest/honeysql.core.html#_raw"><code>honeysql.core/raw</code></a><pre><code>(raw "current_date")
 </code></pre><pre><code>#sql/raw "current_date"</code></pre></li></ul></section><section><p>Extending HoneySQL Operators</p><pre><code>(require 'honeysql.format)
 (defmethod
  honeysql.format/fn-handler
@@ -141,7 +141,7 @@ VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneyS
   [pgobj metadata idx]
   (let [type (.getType pgobj), value (.getValue pgobj)]
     (if (#{"json" "jsonb"} type) (json/parse-string value true) value))))
-</code></pre></p></section><section><p>Someone already did this for ...<p>Postgres: <a href="https://github.com/nilenso/honeysql-postgres">nilenso/honey-postgres</a></p><p>Joda Time: <a href="https://github.com/clj-time/clj-time/blob/master/src/clj_time/jdbc.clj">clj-time</a></p></p></section><section><p>Solid Alternatives</p><ul><li><a href="https://github.com/krisajenkins/yesql">yesql</a><ul><li>SQL is already a DSL, why do we need another abstraction?</li><li>parses SQL into clojure functions</li><li>kinda leaky</li></ul></li><li><a href="http://hugsql.com/">HugSQL</a><ul><li>inspired by yesql</li><li>parses SQL into clojure functions</li><li>supports vastly more SQL than yesql</li><li>actively maintained</li></ul></li></ul></section><section><p>Exercises</p><br /><p>See <a href="https://github.com/emidln/honeysql-talk">this talk's github</a> for examples of extending and using HoneySQL using <a href="https://pgexercises.com">PGExercises.com</a></p></section></div></div><script src="lib/js/head.min.js" type="text/javascript"></script><script src="js/reveal.js" type="text/javascript"></script><script type="text/javascript">//<![CDATA[
+</code></pre></p></section><section><p>Someone already did this for ...<p>Postgres: <a href="https://github.com/nilenso/honeysql-postgres">nilenso/honey-postgres</a></p><p>Joda Time: <a href="https://github.com/clj-time/clj-time/blob/master/src/clj_time/jdbc.clj">clj-time</a></p></p></section><section><p>Solid Alternatives</p><ul><li><a href="https://github.com/krisajenkins/yesql">yesql</a><ul><li>SQL is already a DSL, why do we need another abstraction?</li><li>parses SQL into clojure functions</li></ul></li><li><a href="http://hugsql.com/">HugSQL</a><ul><li>inspired by yesql</li><li>parses SQL into clojure functions</li><li>supports more use cases than yesql</li><li>actively maintained</li></ul></li></ul></section><section><p>Exercises</p><br /><p>See <a href="https://github.com/emidln/honeysql-talk">this talk's github</a> for examples of extending and using HoneySQL using <a href="https://pgexercises.com">PGExercises.com. A Dockerfile is included with instructions in the README.md to get started.</a></p></section></div></div><script src="lib/js/head.min.js" type="text/javascript"></script><script src="js/reveal.js" type="text/javascript"></script><script type="text/javascript">//<![CDATA[
 Reveal.initialize({
          width: 1000,
          height: 1000,
