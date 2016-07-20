@@ -11,11 +11,14 @@
 
 (defmacro clj-code
   [& body]
+  ;; pprint-str mostly is okay, although defmethod, defprotocol, and extend-protocol are kinda awkward
   `[:pre [:code (pprint-str ~@body)]])
 
 (defn init-reveal-js []
   (javascript-tag
    "Reveal.initialize({
+         width: 1000,
+         height: 1000,
          history: true,
          dependencies: [
              { src: 'plugin/markdown/marked.js' },
@@ -74,7 +77,7 @@
        [:ul
         [:li "Oracle, MySQL, PostgreSQL, MS SQL"]
         [:li "SQLite, H2, and many more"]]]
-      [:li.fragment "because boss said so"]]]
+      [:li.fragment "because my boss said so"]]]
     [:section
      [:p "SQL"]
      [:br]
@@ -92,9 +95,40 @@
        [:a {:href "https://github.com/jkk/honeysql"}
         "github.com/jkk/honeysql"]]]]
     [:section
-     [:p "HoneySQL the AST"]
+     [:p "Basic HoneySQL"]
+     [:p "Inserts"
+      (clj-code
+       (-> (insert-into :cities)
+           (values {:name "Chicago" :pizza-rank 1}
+                   {:name "New York" :pizza-rank 2})))
+      (clj-code
+       (-> (insert-into :cities)
+           (columns :name :pizza-rank)
+           (values ["Chicago" 1]
+                   ["New York" 2])))]
+     [:p "Updates"
+      (clj-code
+       (-> (update :cities)
+           (sset {:rank 1})
+           (where [:= :name "New York"])))
+      (clj-code
+       (-> (update :daily-sales)
+           (sset {:total (call :+ :total 1)})
+           (where [:= :date (raw "current_date")])))]
+     [:p "Queries"
+      (clj-code
+       (-> (select :c.name, :c.pizza-rank, :p.population)
+           (from [:cities :c])
+           (join [:population :c] [:= :c.name :p.city-name])
+           (order-by [:c.pizza-rank :asc])
+           (limit 1)))]
+     [:p "Deletes"
+      (clj-code
+       (-> (delete-from :cities)
+           (where [:< :rank 1])))]]
+    [:section
+     [:p "HoneySQL Provides An AST"]
      (clj-code
-      (require '[honeysql.helpers :refer :all])
       (= (-> (select :*)
              (from :foo)
              (where [:= :id 9]
@@ -105,14 +139,33 @@
                   [:= :id 9]
                   [:= :spam "blah"]]}))]
     [:section
+     [:p "and a library to take advantage of it"]
+     (clj-code
+      (->
+       {:select '(:email)
+        :from '(:fancy-hat-customers)
+        :where [:> :disposable-income 10000]}
+       (merge-where [:or
+                     [:= :favorite-color "blue"]
+                     [:= :favorite-team "cubs"]
+                     [:= :lives-in "Chicago"]])))
+     (clj-code
+      {:select (:email),
+       :from (:fancy-hat-customers),
+       :where [:and
+               [:> :disposable-income 10000]
+               [:or
+                [:= :favorite-color "blue"]
+                [:= :favorite-team "cubs"]
+                [:= :lives-in "Chicago"]]]})]
+    [:section
      [:p "You don't need HoneySQL if your queries are static"]
      (clj-code
       (require '[clojure.java.jdbc :as jdbc])
       (require 'clj-time.jdbc) ;; serialize/deserialize DateTimes
       (defn find-foos-by-range
         [db start stop]
-        (jdbc/query db ["SELECT * FROM foo WHERE ts BETWEEN ? and ?"])))
-     [:p.fragment "clojure.java.jdbc is fine if you don't need dynamic query building"]]
+        (jdbc/query db ["SELECT * FROM foo WHERE ts BETWEEN ? and ?"])))]
     [:section
      [:p "But if you need something a little more dynamic..."]
      [:span.fragment
@@ -187,10 +240,18 @@
      [:br]
      [:ul
       [:li "Maps nest as subqueries. If you want a map value to the JDBC layer use "
-       [:a {:href "https://crossclj.info/doc/honeysql/0.7.0/honeysql.format.html#_value"} [:code "honeysql.format/value"]]]
+       [:a {:href "https://crossclj.info/doc/honeysql/0.7.0/honeysql.format.html#_value"} [:code "honeysql.format/value"]]
+       (clj-code
+        (-> (insert-into :meetups-pages)
+            (values {:event 232391630
+                     :meta (value {"keywords" ["USA" "Illinois" "Chicago" "softwaredev" "Clojurians" "Meetup"]
+                                   "geo.position" ["41.881966" "-87.632362"]})})))]
       [:li "Vectors are handled by the individual clause. When it makes sense, it is used for aliasing."
        (clj-code
-        (from [:foo :f]))]]]
+        (from [:foo :f]))
+       (clj-code
+        (where [:= :bar "baz"]))
+       [:pre [:code "#sql/call [:+ :total 1]"]]]]]
      [:section
       [:p "HoneySQL Notes (part 2)"]
       [:ul
@@ -203,7 +264,10 @@
                                  args
                                  (cons {} args))]
              (assoc m :union (vec queries)))))]
-       [:li "Raw SQL access is available, see " [:a {:href "https://crossclj.info/doc/honeysql/latest/honeysql.core.html#_raw"} [:code "honeysql.core/raw"]]]]]
+       [:li "Raw SQL access is available, see " [:a {:href "https://crossclj.info/doc/honeysql/latest/honeysql.core.html#_raw"} [:code "honeysql.core/raw"]]
+        (clj-code
+         (raw "current_date"))
+        [:pre [:code "#sql/raw \"current_date\""]]]]]
     [:section
      [:p "Extending HoneySQL Operators"]
      (clj-code
@@ -231,27 +295,31 @@
           (returning :count)))]
     [:section
      [:p "Using clojure.java.jdbc"]
-     (clj-code
-      (require '[clojure.java.jdbc :as jdbc]
-               '[cheshire.core :as json])
-      (import 'org.postgresql.util.PGobject)
-      ;; setup JSON fields to automatically serialize-deserialize
-      (defn value-to-json-pgobject [value]
-        (doto (PGobject.)
-          ;; hack for now -- eventually we should properly determine the actual type
-          (.setType "jsonb")
-          (.setValue (json/generate-string value))))
-      (extend-protocol jdbc/ISQLValue
-        clojure.lang.IPersistentMap
-        (sql-value [value] (value-to-json-pgobject value)))
-      (extend-protocol jdbc/IResultSetReadColumn
-        org.postgresql.util.PGobject
-        (result-set-read-column [pgobj metadata idx]
-          (let [type (.getType pgobj)
-                value (.getValue pgobj)]
-            (if (#{"jsonb" "json"} type)
-              (json/parse-string value true)
-              value)))))]
+     [:p
+      (clj-code
+       (require '[clojure.java.jdbc :as jdbc]
+                '[cheshire.core :as json])
+       (import 'org.postgresql.util.PGobject)
+
+       ;; setup JSON fields to automatically serialize-deserialize
+       (defn value-to-json-pgobject [value]
+         (doto (PGobject.)
+           ;; hack for now -- eventually we should properly determine the actual type
+           (.setType "jsonb")
+           (.setValue (json/generate-string value)))))
+
+      (clj-code
+       (extend-protocol jdbc/ISQLValue
+         clojure.lang.IPersistentMap
+         (sql-value [value] (value-to-json-pgobject value)))
+       (extend-protocol jdbc/IResultSetReadColumn
+         org.postgresql.util.PGobject
+         (result-set-read-column [pgobj metadata idx]
+           (let [type (.getType pgobj)
+                 value (.getValue pgobj)]
+             (if (#{"jsonb" "json"} type)
+               (json/parse-string value true)
+               value)))))]]
     [:section
      [:p "Someone already did this for ..."
       [:p "Postgres: " [:a {:href "https://github.com/nilenso/honeysql-postgres"} "nilenso/honey-postgres"]]

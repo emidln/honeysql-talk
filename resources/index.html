@@ -6,18 +6,50 @@
  :databases #{:redis :postgresql :zookeeper :mongodb},
  :location "Ravenswood, Chicago, IL, USA",
  :hiring? true}
-</code></pre></section><section><p>Why SQL?</p><ul><li class="fragment">popular databases ...<ul><li>Oracle, MySQL, PostgreSQL, MS SQL</li><li>SQLite, H2, and many more</li></ul></li><li class="fragment">because boss said so</li></ul></section><section><p>SQL</p><br /><pre><code>SELECT * FROM foo WHERE id = 9 AND spam = 'blah';</code></pre><pre><code>UPDATE bar SET quux = 'spam' WHERE id = 37;</code></pre><pre><code data-trim="data-noescape">INSERT INTO pokedex (pokemon, name, level)
-VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneySQL?</p><ul><li class="fragment">AST for SQL represented using Clojure data</li><li class="fragment">Helper library for friendly parameterized query construction</li><li class="fragment">Written by Justin Kramer (<a href="https://github.com/jkk">@jkk</a>) and maintained at <a href="https://github.com/jkk/honeysql">github.com/jkk/honeysql</a></li></ul></section><section><p>HoneySQL the AST</p><pre><code>(require '[honeysql.helpers :refer :all])
-(=
+</code></pre></section><section><p>Why SQL?</p><ul><li class="fragment">popular databases ...<ul><li>Oracle, MySQL, PostgreSQL, MS SQL</li><li>SQLite, H2, and many more</li></ul></li><li class="fragment">because my boss said so</li></ul></section><section><p>SQL</p><br /><pre><code>SELECT * FROM foo WHERE id = 9 AND spam = 'blah';</code></pre><pre><code>UPDATE bar SET quux = 'spam' WHERE id = 37;</code></pre><pre><code data-trim="data-noescape">INSERT INTO pokedex (pokemon, name, level)
+VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneySQL?</p><ul><li class="fragment">AST for SQL represented using Clojure data</li><li class="fragment">Helper library for friendly parameterized query construction</li><li class="fragment">Written by Justin Kramer (<a href="https://github.com/jkk">@jkk</a>) and maintained at <a href="https://github.com/jkk/honeysql">github.com/jkk/honeysql</a></li></ul></section><section><p>Basic HoneySQL</p><p>Inserts<pre><code>(-> (insert-into :cities)
+    (values
+     {:name "Chicago", :pizza-rank 1}
+     {:name "New York", :pizza-rank 2}))
+</code></pre><pre><code>(-> (insert-into :cities)
+    (columns :name :pizza-rank)
+    (values ["Chicago" 1] ["New York" 2]))
+</code></pre></p><p>Updates<pre><code>(-> (update :cities) (sset {:rank 1}) (where [:= :name "New York"]))
+</code></pre><pre><code>(-> (update :daily-sales)
+    (sset {:total (call :+ :total 1)})
+    (where [:= :date (raw "current_date")]))
+</code></pre></p><p>Queries<pre><code>(-> (select :c.name :c.pizza-rank :p.population)
+    (from [:cities :c])
+    (join [:population :c] [:= :c.name :p.city-name])
+    (order-by [:c.pizza-rank :asc])
+    (limit 1))
+</code></pre></p><p>Deletes<pre><code>(-> (delete-from :cities) (where [:< :rank 1]))
+</code></pre></p></section><section><p>HoneySQL Provides An AST</p><pre><code>(=
  (-> (select :*) (from :foo) (where [:= :id 9] [:= :spam "blah"]))
  {:select '(:*),
   :from '(:foo),
   :where [:and [:= :id 9] [:= :spam "blah"]]})
+</code></pre></section><section><p>and a library to take advantage of it</p><pre><code>(-> {:select '(:email),
+     :from '(:fancy-hat-customers),
+     :where [:> :disposable-income 10000]}
+    (merge-where
+     [:or
+      [:= :favorite-color "blue"]
+      [:= :favorite-team "cubs"]
+      [:= :lives-in "Chicago"]]))
+</code></pre><pre><code>{:select (:email),
+ :from (:fancy-hat-customers),
+ :where [:and
+         [:> :disposable-income 10000]
+         [:or
+          [:= :favorite-color "blue"]
+          [:= :favorite-team "cubs"]
+          [:= :lives-in "Chicago"]]]}
 </code></pre></section><section><p>You don't need HoneySQL if your queries are static</p><pre><code>(require '[clojure.java.jdbc :as jdbc])
 (require 'clj-time.jdbc)
 (defn find-foos-by-range [db start stop]
   (jdbc/query db ["SELECT * FROM foo WHERE ts BETWEEN ? and ?"]))
-</code></pre><p class="fragment">clojure.java.jdbc is fine if you don't need dynamic query building</p></section><section><p>But if you need something a little more dynamic...</p><span class="fragment"><pre><code>(let [id 9, spam "blah"]
+</code></pre></section><section><p>But if you need something a little more dynamic...</p><span class="fragment"><pre><code>(let [id 9, spam "blah"]
   (cond-> "SELECT * FROM foo WHERE"
     (some? id) (str " id = " id)
     (and (some? id) (some? spam)) (str " AND ")
@@ -47,13 +79,26 @@ VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneyS
                      honeysql.core/format))
       [sql params] (selector id spam)]
   (clojure.java.jdbc/query db sql params))
-</code></pre></section><section><p>AST Advantages</p><ul><li>Safety<ul><li>Let the library worry about parameters</li></ul></li><li>Tooling<ul><li>clojure.core</li><li>plumbing.core</li><li>your favorite utility library</li></ul></li></ul></section><section><p>By representing the AST as Clojure data structures, our core Clojure language can be used to easily manipulate a query</p><br /><p>Sound familiar?</p></section><section><p>HoneySQL Notes (part 1)</p><br /><ul><li>Maps nest as subqueries. If you want a map value to the JDBC layer use <a href="https://crossclj.info/doc/honeysql/0.7.0/honeysql.format.html#_value"><code>honeysql.format/value</code></a></li><li>Vectors are handled by the individual clause. When it makes sense, it is used for aliasing.<pre><code>(from [:foo :f])
-</code></pre></li></ul></section><section><p>HoneySQL Notes (part 2)</p><ul><li>Not all clauses have helpers. They are easy to define if you think it'll help readability:<pre><code>(defn union
+</code></pre></section><section><p>AST Advantages</p><ul><li>Safety<ul><li>Let the library worry about parameters</li></ul></li><li>Tooling<ul><li>clojure.core</li><li>plumbing.core</li><li>your favorite utility library</li></ul></li></ul></section><section><p>By representing the AST as Clojure data structures, our core Clojure language can be used to easily manipulate a query</p><br /><p>Sound familiar?</p></section><section><p>HoneySQL Notes (part 1)</p><br /><ul><li>Maps nest as subqueries. If you want a map value to the JDBC layer use <a href="https://crossclj.info/doc/honeysql/0.7.0/honeysql.format.html#_value"><code>honeysql.format/value</code></a><pre><code>(-> (insert-into :meetups-pages)
+    (values
+     {:event 232391630,
+      :meta (value
+             {"keywords" ["USA"
+                          "Illinois"
+                          "Chicago"
+                          "softwaredev"
+                          "Clojurians"
+                          "Meetup"],
+              "geo.position" ["41.881966" "-87.632362"]})}))
+</code></pre></li><li>Vectors are handled by the individual clause. When it makes sense, it is used for aliasing.<pre><code>(from [:foo :f])
+</code></pre><pre><code>(where [:= :bar "baz"])
+</code></pre><pre><code>#sql/call [:+ :total 1]</code></pre></li></ul></section><section><p>HoneySQL Notes (part 2)</p><ul><li>Not all clauses have helpers. They are easy to define if you think it'll help readability:<pre><code>(defn union
   {:argslists '([& queries] [m & queries])}
   [& args]
   (let [[m & queries] (if (map? (first args)) args (cons {} args))]
     (assoc m :union (vec queries))))
-</code></pre></li><li>Raw SQL access is available, see <a href="https://crossclj.info/doc/honeysql/latest/honeysql.core.html#_raw"><code>honeysql.core/raw</code></a></li></ul></section><section><p>Extending HoneySQL Operators</p><pre><code>(require 'honeysql.format)
+</code></pre></li><li>Raw SQL access is available, see <a href="https://crossclj.info/doc/honeysql/latest/honeysql.core.html#_raw"><code>honeysql.core/raw</code></a><pre><code>(raw "current_date")
+</code></pre><pre><code>#sql/raw "current_date"</code></pre></li></ul></section><section><p>Extending HoneySQL Operators</p><pre><code>(require 'honeysql.format)
 (defmethod
  honeysql.format/fn-handler
  "json-eq"
@@ -79,13 +124,13 @@ VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneyS
      {:count #honeysql.types.SqlCall{:name :+, :args (:count 1)}})
     (where [:= :id 99])
     (returning :count))
-</code></pre></section><section><p>Using clojure.java.jdbc</p><pre><code>(require '[clojure.java.jdbc :as jdbc] '[cheshire.core :as json])
+</code></pre></section><section><p>Using clojure.java.jdbc</p><p><pre><code>(require '[clojure.java.jdbc :as jdbc] '[cheshire.core :as json])
 (import 'org.postgresql.util.PGobject)
 (defn value-to-json-pgobject [value]
   (doto (PGobject.)
         (.setType "jsonb")
         (.setValue (json/generate-string value))))
-(extend-protocol
+</code></pre><pre><code>(extend-protocol
  jdbc/ISQLValue
  clojure.lang.IPersistentMap
  (sql-value [value] (value-to-json-pgobject value)))
@@ -96,8 +141,10 @@ VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneyS
   [pgobj metadata idx]
   (let [type (.getType pgobj), value (.getValue pgobj)]
     (if (#{"json" "jsonb"} type) (json/parse-string value true) value))))
-</code></pre></section><section><p>Someone already did this for ...<p>Postgres: <a href="https://github.com/nilenso/honeysql-postgres">nilenso/honey-postgres</a></p><p>Joda Time: <a href="https://github.com/clj-time/clj-time/blob/master/src/clj_time/jdbc.clj">clj-time</a></p></p></section><section><p>Solid Alternatives</p><ul><li><a href="https://github.com/krisajenkins/yesql">yesql</a><ul><li>SQL is already a DSL, why do we need another abstraction?</li><li>parses SQL into clojure functions</li><li>kinda leaky</li></ul></li><li><a href="http://hugsql.com/">HugSQL</a><ul><li>inspired by yesql</li><li>parses SQL into clojure functions</li><li>supports vastly more SQL than yesql</li><li>actively maintained</li></ul></li></ul></section><section><p>Exercises</p><br /><p>See <a href="https://github.com/emidln/honeysql-talk">this talk's github</a> for examples of extending and using HoneySQL using <a href="https://pgexercises.com">PGExercises.com</a></p></section></div></div><script src="lib/js/head.min.js" type="text/javascript"></script><script src="js/reveal.js" type="text/javascript"></script><script type="text/javascript">//<![CDATA[
+</code></pre></p></section><section><p>Someone already did this for ...<p>Postgres: <a href="https://github.com/nilenso/honeysql-postgres">nilenso/honey-postgres</a></p><p>Joda Time: <a href="https://github.com/clj-time/clj-time/blob/master/src/clj_time/jdbc.clj">clj-time</a></p></p></section><section><p>Solid Alternatives</p><ul><li><a href="https://github.com/krisajenkins/yesql">yesql</a><ul><li>SQL is already a DSL, why do we need another abstraction?</li><li>parses SQL into clojure functions</li><li>kinda leaky</li></ul></li><li><a href="http://hugsql.com/">HugSQL</a><ul><li>inspired by yesql</li><li>parses SQL into clojure functions</li><li>supports vastly more SQL than yesql</li><li>actively maintained</li></ul></li></ul></section><section><p>Exercises</p><br /><p>See <a href="https://github.com/emidln/honeysql-talk">this talk's github</a> for examples of extending and using HoneySQL using <a href="https://pgexercises.com">PGExercises.com</a></p></section></div></div><script src="lib/js/head.min.js" type="text/javascript"></script><script src="js/reveal.js" type="text/javascript"></script><script type="text/javascript">//<![CDATA[
 Reveal.initialize({
+         width: 1000,
+         height: 1000,
          history: true,
          dependencies: [
              { src: 'plugin/markdown/marked.js' },
