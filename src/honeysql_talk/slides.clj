@@ -56,7 +56,8 @@
      [:h1 "HoneySQL"]
      [:br]
      [:h4 "Chicago Clojure"]
-     [:h6 "July 20, 2016"]]
+     [:h6 "July 20, 2016"]
+     [:p [:a {:href "https://github.com/emidln/honeysql-talk"} "https://github.com/emidln/honeysql-talk"]]]
     [:section
      [:p "about me"]
      (clj-code
