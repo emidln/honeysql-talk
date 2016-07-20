@@ -20,9 +20,11 @@
 (comment
 
   ;; using HoneySQL
-  (query-runner db (-> (select :*)
-                       (from :cd.members)
-                       (limit 1)))
+
+  (with-query-logged
+    (query-runner db (-> (select :*)
+                         (from :cd.members)
+                         (limit 1))))
 
   ;; using SQL
   (query db ["SELECT * FROM cd.members LIMIT 1"])

@@ -78,7 +78,7 @@
    :doc "Runs the body with queries logged at log-level (default :error)"}
   [& body]
   (let [[car & cdr] body
-        log-level (if (keyword? car) car :error)
+        log-level (if (keyword? car) car :debug)
         query (if (keyword? car) cdr body)]
     `(binding [~'honeysql-talk.extra/*jdbc-log-level* ~log-level]
        (do ~@query))))
