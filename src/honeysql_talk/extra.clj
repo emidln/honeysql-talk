@@ -105,7 +105,7 @@
 (def ^{:arglists '[[db-conn honeysql-map]]}
   query-runner
   "Given a db-component and a query-map, query using the query-map returning a vector or nil"
-  (partial honey-jdbc-runner #(jdbc/query %1 %2 :identifiers kebob-case) :ansi))
+  (partial honey-jdbc-runner #(jdbc/query %1 %2 {:identifiers kebob-case}) :ansi))
 
 (def ^{:arglists '[[db-conn honeysql-map]]}
   exec-runner
