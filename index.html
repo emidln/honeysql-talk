@@ -7,23 +7,23 @@
  :location "Ravenswood, Chicago, IL, USA",
  :hiring? true}
 </code></pre></section><section><p>Why SQL?</p><ul><li class="fragment">popular databases ...<ul><li>Oracle, MySQL, PostgreSQL, MS SQL</li><li>SQLite, H2, and many more</li></ul></li><li class="fragment">because my boss said so</li></ul></section><section><p>SQL</p><br /><pre><code>SELECT * FROM foo WHERE id = 9 AND spam = 'blah';</code></pre><pre><code>UPDATE bar SET quux = 'spam' WHERE id = 37;</code></pre><pre><code data-trim="data-noescape">INSERT INTO pokedex (pokemon, name, level)
-VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneySQL?</p><ul><li class="fragment">AST for SQL represented using Clojure data</li><li class="fragment">Helper library for friendly parameterized query construction</li><li class="fragment">Written by Justin Kramer (<a href="https://github.com/jkk">@jkk</a>) and maintained at <a href="https://github.com/jkk/honeysql">github.com/jkk/honeysql</a></li></ul></section><section><p>Basic HoneySQL</p><p class="fragment">Inserts<pre><code>(-> (insert-into :cities)
+VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneySQL?</p><ul><li class="fragment">AST for SQL represented using Clojure data</li><li class="fragment">Helper library for friendly parameterized query construction</li><li class="fragment">Written by Justin Kramer (<a href="https://github.com/jkk">@jkk</a>) and maintained at <a href="https://github.com/jkk/honeysql">github.com/jkk/honeysql</a></li></ul></section><section><p>Basic HoneySQL</p><p>Inserts<pre><code>(-> (insert-into :cities)
     (values
      {:name "Chicago", :pizza-rank 1}
      {:name "New York", :pizza-rank 2}))
 </code></pre><pre><code>(-> (insert-into :cities)
     (columns :name :pizza-rank)
     (values ["Chicago" 1] ["New York" 2]))
-</code></pre></p><p class="fragment">Updates<pre><code>(-> (update :cities) (sset {:rank 1}) (where [:= :name "New York"]))
+</code></pre></p><p>Updates<pre><code>(-> (update :cities) (sset {:rank 1}) (where [:= :name "New York"]))
 </code></pre><pre><code>(-> (update :daily-sales)
     (sset {:total (call :+ :total 1)})
     (where [:= :date (raw "current_date")]))
-</code></pre></p><p class="fragment">Queries<pre><code>(-> (select :c.name :c.pizza-rank :p.population)
+</code></pre></p><p>Queries<pre><code>(-> (select :c.name :c.pizza-rank :p.population)
     (from [:cities :c])
     (join [:population :c] [:= :c.name :p.city-name])
     (order-by [:c.pizza-rank :asc])
     (limit 1))
-</code></pre></p><p class="fragment">Deletes<pre><code>(-> (delete-from :cities) (where [:< :rank 1]))
+</code></pre></p><p>Deletes<pre><code>(-> (delete-from :cities) (where [:< :rank 1]))
 </code></pre></p></section><section><p>HoneySQL Provides An AST</p><pre><code>(=
  (-> (select :*) (from :foo) (where [:= :id 9] [:= :spam "blah"]))
  {:select '(:*),
