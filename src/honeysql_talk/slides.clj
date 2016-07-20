@@ -99,35 +99,35 @@
     [:section
      [:p "Basic HoneySQL"]
      [:p "Inserts"
-      (clj-code
-       (-> (insert-into :cities)
-           (values {:name "Chicago" :pizza-rank 1}
-                   {:name "New York" :pizza-rank 2})))
-      (clj-code
-       (-> (insert-into :cities)
-           (columns :name :pizza-rank)
-           (values ["Chicago" 1]
-                   ["New York" 2])))]
+       (clj-code
+        (-> (insert-into :cities)
+            (values {:name "Chicago" :pizza-rank 1}
+                    {:name "New York" :pizza-rank 2})))
+       (clj-code
+        (-> (insert-into :cities)
+            (columns :name :pizza-rank)
+            (values ["Chicago" 1]
+                    ["New York" 2])))]
      [:p "Updates"
-      (clj-code
-       (-> (update :cities)
-           (sset {:rank 1})
-           (where [:= :name "New York"])))
-      (clj-code
-       (-> (update :daily-sales)
-           (sset {:total (call :+ :total 1)})
-           (where [:= :date (raw "current_date")])))]
+       (clj-code
+        (-> (update :cities)
+            (sset {:rank 1})
+            (where [:= :name "New York"])))
+       (clj-code
+        (-> (update :daily-sales)
+            (sset {:total (call :+ :total 1)})
+            (where [:= :date (raw "current_date")])))]
      [:p "Queries"
-      (clj-code
-       (-> (select :c.name, :c.pizza-rank, :p.population)
-           (from [:cities :c])
-           (join [:population :c] [:= :c.name :p.city-name])
-           (order-by [:c.pizza-rank :asc])
-           (limit 1)))]
+       (clj-code
+        (-> (select :c.name, :c.pizza-rank, :p.population)
+            (from [:cities :c])
+            (join [:population :c] [:= :c.name :p.city-name])
+            (order-by [:c.pizza-rank :asc])
+            (limit 1)))]
      [:p "Deletes"
-      (clj-code
-       (-> (delete-from :cities)
-           (where [:< :rank 1])))]]
+       (clj-code
+        (-> (delete-from :cities)
+            (where [:< :rank 1])))]]
     [:section
      [:p "HoneySQL Provides An AST"]
      (clj-code
@@ -248,7 +248,7 @@
             (values {:event 232391630
                      :meta (value {"keywords" ["USA" "Illinois" "Chicago" "softwaredev" "Clojurians" "Meetup"]
                                    "geo.position" ["41.881966" "-87.632362"]})})))]
-      [:li "Vectors are handled by the individual clause. When it makes sense, it is used for aliasing."
+      [:li.fragment "Vectors are handled by the individual clause. When it makes sense, it is used for aliasing."
        (clj-code
         (from [:foo :f]))
        (clj-code
@@ -266,7 +266,7 @@
                                  args
                                  (cons {} args))]
              (assoc m :union (vec queries)))))]
-       [:li "Raw SQL access is available, see " [:a {:href "https://crossclj.info/doc/honeysql/latest/honeysql.core.html#_raw"} [:code "honeysql.core/raw"]]
+       [:li.fragment "Raw SQL access is available, see " [:a {:href "https://crossclj.info/doc/honeysql/latest/honeysql.core.html#_raw"} [:code "honeysql.core/raw"]]
         (clj-code
          (raw "current_date"))
         [:pre [:code "#sql/raw \"current_date\""]]]]]
@@ -333,19 +333,18 @@
       [:li [:a {:href "https://github.com/krisajenkins/yesql"} "yesql"]
        [:ul
         [:li "SQL is already a DSL, why do we need another abstraction?"]
-        [:li "parses SQL into clojure functions"]
-        [:li "kinda leaky"]]]
+        [:li "parses SQL into clojure functions"]]]
       [:li [:a {:href "http://hugsql.com/"} "HugSQL"]
        [:ul
         [:li "inspired by yesql"]
         [:li "parses SQL into clojure functions"]
-        [:li "supports vastly more SQL than yesql"]
+        [:li "supports more use cases than yesql"]
         [:li "actively maintained"]]]]]
     [:section
      [:p "Exercises"]
      [:br]
      [:p "See " [:a {:href "https://github.com/emidln/honeysql-talk"} "this talk's github"]
-      " for examples of extending and using HoneySQL using " [:a {:href "https://pgexercises.com"} "PGExercises.com"]]]))
+      " for examples of extending and using HoneySQL using " [:a {:href "https://pgexercises.com"} "PGExercises.com. A Dockerfile is included with instructions in the README.md to get started."]]]))
 
 (defn render
   []
