@@ -53,8 +53,8 @@ VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneyS
   (cond-> "SELECT * FROM foo WHERE"
     (some? id) (str " id = " id)
     (and (some? id) (some? spam)) (str " AND ")
-    (some? spam) (str " spam = " spam)))
-</code></pre></span><br /><spam class="fragment"><p>Have you done this?</p><p>Spot any potential bugs?</p></spam></section><section><p>SQL Injection?</p><p class="fragment">We forgot to insert driver-specific placeholders and track the values in an array so we can pass those separately to JDBC.</p></section><section><p>Easy, right?</p><span class="fragment"><pre><code>(require 'clojure.java.jdbc)
+    (some? spam) (str "spam = " spam)))
+</code></pre></span><br /><spam class="fragment"><p>Have you done this?</p><p>Spot any potential bugs?</p></spam></section><section><p>SQL Injection?</p><p class="fragment">I forgot to insert driver-specific placeholders and track the values in an array so I can pass those separately to JDBC.</p><p>String building?</p><p class="fragment">I left out a space around spam. This will result in something like "WHEREspam=" if id isn't given.</p></section><section><p>Easy, right?</p><span class="fragment"><pre><code>(require 'clojure.java.jdbc)
 (let [id 9
       spam "blah"
       selector (fn [id spam]
@@ -65,8 +65,8 @@ VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneyS
                       (some? spam)
                         (#(do (swap! params conj %) (str " spam = ?"))))
                     @params]))
-      [sql params] (selector id spam)]
-  (clojure.java.jdbc/query db sql params))
+      [sql & params] (selector id spam)]
+  (apply clojure.java.jdbc/query db sql params))
 </code></pre></span></section><section><p>Yikes! Maybe something does this for us?</p></section><section><p>HoneySQL the AST (cont'd)</p><pre><code>(require 'honeysql.core)
 (require '[honeysql.helpers :refer :all])
 (require 'clojure.java.jdbc)
@@ -77,8 +77,8 @@ VALUES ('pikachu', 'Perry', 9);</code></pre></section><section><p>What is HoneyS
                        (some? id) (merge-where [:= :id id])
                        (some? spam) (merge-where [:= :spam spam]))
                      honeysql.core/format))
-      [sql params] (selector id spam)]
-  (clojure.java.jdbc/query db sql params))
+      [sql & params] (selector id spam)]
+  (apply clojure.java.jdbc/query db sql params))
 </code></pre></section><section><p>AST Advantages</p><ul><li>Safety<ul><li>Let the library worry about parameters</li></ul></li><li>Tooling<ul><li>clojure.core</li><li>plumbing.core</li><li>your favorite utility library</li></ul></li></ul></section><section><p>By representing the AST as Clojure data structures, our core Clojure language can be used to easily manipulate a query</p><br /><p>Sound familiar?</p></section><section><p>HoneySQL Notes (part 1)</p><br /><ul><li>Maps nest as subqueries. If you want a map value to the JDBC layer use <a href="https://crossclj.info/doc/honeysql/0.7.0/honeysql.format.html#_value"><code>honeysql.format/value</code></a><pre><code>(-> (insert-into :meetups-pages)
     (values
      {:event 232391630,
