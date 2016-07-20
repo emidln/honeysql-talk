@@ -2,7 +2,8 @@
   (:require [ssg.core :as ssg]
             [hiccup.element :refer [javascript-tag]]
             [hiccup.page :refer [include-js include-css]]
-            fipp.clojure))
+            fipp.clojure
+            honeysql.types))
 
 (defmacro pprint-str
   [& body]
@@ -349,7 +350,7 @@
   []
   (ssg/render-pages "resources/" {"index.html" slides-index}))
 
-(render)
+;(render)
 
 (defn -main []
 
