@@ -178,14 +178,16 @@
            (some? id) (str " id = " id)
            (and (some? id)
                 (some? spam)) (str " AND ")
-           (some? spam) (str " spam = " spam))))]
+           (some? spam) (str "spam = " spam))))]
      [:br]
      [:spam.fragment
       [:p "Have you done this?"]
       [:p "Spot any potential bugs?"]]]
     [:section
      [:p "SQL Injection?"]
-     [:p.fragment "We forgot to insert driver-specific placeholders and track the values in an array so we can pass those separately to JDBC."]]
+     [:p.fragment "I forgot to insert driver-specific placeholders and track the values in an array so I can pass those separately to JDBC."]
+     [:p "String building?"]
+     [:p.fragment "I left out a space around spam. This will result in something like \"WHEREspam=\" if id isn't given."]]
     [:section
      [:p "Easy, right?"]
      [:span.fragment
@@ -203,8 +205,8 @@
                              (some? spam) (#(do (swap! params conj %)
                                                 (str " spam = ?"))))
                            @params]))
-             [sql params] (selector id spam)]
-         (clojure.java.jdbc/query db sql params)))]]
+             [sql & params] (selector id spam)]
+         (apply clojure.java.jdbc/query db sql params)))]]
     [:section
      [:p "Yikes! Maybe something does this for us?"]]
     [:section
@@ -221,8 +223,8 @@
                              (some? id) (merge-where [:= :id id])
                              (some? spam) (merge-where [:= :spam spam]))
                            honeysql.core/format))
-            [sql params] (selector id spam)]
-        (clojure.java.jdbc/query db sql params)))]
+            [sql & params] (selector id spam)]
+        (apply clojure.java.jdbc/query db sql params)))]
     [:section
      [:p "AST Advantages"]
      [:ul
